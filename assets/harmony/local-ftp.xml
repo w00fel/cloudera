@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Host alias="Local FTP Users" application="" by="w00fel" class="com.cleo.lexicom.beans.FtpUserHost" enabled="True" local="True" modified="2015/11/25 00:00:00" preconfigured="2015/11/25 00:00:00" ready="True" transport="FTP" type="">
+  <Connecttype>0</Connecttype>
+  <Ftprootpath>local/root</Ftprootpath>
+  <Inbox>inbox/</Inbox>
+  <Incomingfilepatterns>*</Incomingfilepatterns>
+  <Index>0</Index>
+  <Indexdate>-1</Indexdate>
+  <Internal>0</Internal>
+  <Makeremovedirectories>True</Makeremovedirectories>
+  <Notes>This contains the Local FTP server user accounts.  These work in conjunction with the settings in the Local Listener FTP tab.</Notes>
+  <Origin>Local FTP Users</Origin>
+  <Outbox>outbox/</Outbox>
+  <Port>0</Port>
+  <Runninglocalrequired>True</Runninglocalrequired>
+  <Mailbox alias="dan" as3user="False" by="w00fel" class="com.cleo.lexicom.beans.FtpUserMailbox" enabled="True" folder="" localencrcertalias="" localencrcertpassword="" localencrpending="False" localencrreadonly="False" localsigncertalias="" localsigncertpassword="" modified="2015/11/25 00:00:00" partnerreadonly="False" ready="False" servercertfile="" serversigncertfile="">
+    <Asyncdeliverymethod>4</Asyncdeliverymethod>
+    <Compressedrequest>False</Compressedrequest>
+    <Contenttype>-1</Contenttype>
+    <Deliverytype>1</Deliverytype>
+    <Emailmdn>False</Emailmdn>
+    <Encryptedrequest>False</Encryptedrequest>
+    <Encryptionmethod>4</Encryptionmethod>
+    <Forceencryption>False</Forceencryption>
+    <Forcesignature>False</Forcesignature>
+    <Homedirectory>dan</Homedirectory>
+    <Lastclientemailexecutedate>-1</Lastclientemailexecutedate>
+    <Lastserveremailexecutedate>-1</Lastserveremailexecutedate>
+    <Localreadonly>False</Localreadonly>
+    <Messageversion>1.1</Messageversion>
+    <Mictype>0</Mictype>
+    <Overridelistenercerts>False</Overridelistenercerts>
+    <Passworddate>2015/11/25 00:00:00</Passworddate>
+    <Pwdhash>vlpdkdf2:1000:041b6a526ecdb68957211714d5c407063e42b969fea586500f4217d8d50566ba:bbe8ae5a00445f7981744b3c67c69aafaa6ad86e968f2c7c</Pwdhash>
+    <Receiptdesired>False</Receiptdesired>
+    <Signedreceipt>False</Signedreceipt>
+    <Signedrequest>False</Signedrequest>
+    <Usedefroot>True</Usedefroot>
+    <Useencrcert>False</Useencrcert>
+    <Usertype>0</Usertype>
+    <Usesamecerts>False</Usesamecerts>
+    <Usesigncert>False</Usesigncert>
+    <Advanced>Compression-SigningOrder=Sign then compress</Advanced>
+    <Advanced>PGPHashAlgorithm=SHA-256</Advanced>
+    <Advanced>UseAS3ContentTypeForFileExtension=true</Advanced>
+    <Advanced>PGPEncryptionAlgorithm=TripleDES</Advanced>
+    <Advanced>PGPCompressionAlgorithm=ZIP</Advanced>
+    <Advanced>UseExternalIPAddressInPASVResponse=true</Advanced>
+    <partnerPGPCompress>False</partnerPGPCompress>
+    <partnerPGPForceEncryption>True</partnerPGPForceEncryption>
+    <partnerOverrideListenerCert>False</partnerOverrideListenerCert>
+  </Mailbox>
+  <Mailbox alias="local" as3user="False" by="w00fel" class="com.cleo.lexicom.beans.FtpUserMailbox" enabled="True" folder="" localencrcertalias="" localencrcertpassword="" localencrpending="False" localencrreadonly="False" localsigncertalias="" localsigncertpassword="" modified="2015/11/25 00:00:00" partnerreadonly="False" ready="False" servercertfile="" serversigncertfile="">
+    <Asyncdeliverymethod>4</Asyncdeliverymethod>
+    <Compressedrequest>False</Compressedrequest>
+    <Contenttype>-1</Contenttype>
+    <Deliverytype>1</Deliverytype>
+    <Emailmdn>False</Emailmdn>
+    <Encryptedrequest>False</Encryptedrequest>
+    <Encryptionmethod>4</Encryptionmethod>
+    <Forceencryption>False</Forceencryption>
+    <Forcesignature>False</Forcesignature>
+    <Homedirectory>local</Homedirectory>
+    <Lastclientemailexecutedate>-1</Lastclientemailexecutedate>
+    <Lastserveremailexecutedate>-1</Lastserveremailexecutedate>
+    <Localreadonly>False</Localreadonly>
+    <Messageversion>1.1</Messageversion>
+    <Mictype>0</Mictype>
+    <Overridelistenercerts>False</Overridelistenercerts>
+    <Passworddate>2015/11/25 00:00:00</Passworddate>
+    <Pwdhash>vlpdkdf2:1000:041b6a526ecdb68957211714d5c407063e42b969fea586500f4217d8d50566ba:bbe8ae5a00445f7981744b3c67c69aafaa6ad86e968f2c7c</Pwdhash>
+    <Receiptdesired>False</Receiptdesired>
+    <Signedreceipt>False</Signedreceipt>
+    <Signedrequest>False</Signedrequest>
+    <Usedefroot>True</Usedefroot>
+    <Useencrcert>False</Useencrcert>
+    <Usertype>0</Usertype>
+    <Usesamecerts>False</Usesamecerts>
+    <Usesigncert>False</Usesigncert>
+    <Advanced>Compression-SigningOrder=Sign then compress</Advanced>
+    <Advanced>PGPHashAlgorithm=SHA-256</Advanced>
+    <Advanced>UseAS3ContentTypeForFileExtension=true</Advanced>
+    <Advanced>PGPEncryptionAlgorithm=TripleDES</Advanced>
+    <Advanced>PGPCompressionAlgorithm=ZIP</Advanced>
+    <Advanced>UseExternalIPAddressInPASVResponse=true</Advanced>
+    <partnerPGPCompress>False</partnerPGPCompress>
+    <partnerPGPForceEncryption>True</partnerPGPForceEncryption>
+    <partnerOverrideListenerCert>False</partnerOverrideListenerCert>
+    <Action alias="receive" by="w00fel" class="com.cleo.lexicom.beans.FtpUserAction" enabled="True" modified="2015/11/25 00:00:00" ready="True">
+      <Commands># Receive files from remote host
+LCOPY "vfs:/templates=hadoop/remote/outbox/*" %inbox%</Commands>
+    </Action>
+    <Action alias="send" by="w00fel" class="com.cleo.lexicom.beans.FtpUserAction" enabled="True" modified="2015/11/25 00:00:00" ready="True">
+      <Commands># Send files to remote host
+LCOPY -DEL %outbox%/* "vfs:/templates=hadoop/remote/inbox/"</Commands>
+    </Action>
+    <Action alias="append" by="w00fel" class="com.cleo.lexicom.beans.FtpUserAction" enabled="True" modified="2015/11/25 00:00:00" ready="True">
+      <Commands># Append files to remote host
+LCOPY -DEL -APE %outbox%/* "vfs:/templates=hadoop/remote/inbox/"</Commands>
+    </Action>
+  </Mailbox>
+</Host>

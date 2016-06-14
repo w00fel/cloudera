@@ -1,0 +1,33 @@
+---
+config:
+  aws:
+    region: '{{region}}'
+    ssh_key_name: '{{ssh_key_name}}'
+    infrastructure_stack: '{{infrastructure_stack}}'
+    kerberos_stack: '{{kerberos_stack}}'
+    cloudera_stack: '{{cloudera_stack}}'
+    harmony_stack: '{{harmony_stack}}'
+    deployment: '{{deployment}}'
+
+  kerberos:
+    server: '{{kerberos.stack_outputs.PublicDNS}}'
+    realm: 'HADOOP'
+
+  ssh:
+    key: '{{ssh_private_key_path}}'
+
+  cluster:
+    director: '{{cloudera.stack_outputs.PublicDNS}}'
+    manager: '{{cluster.hosts.manager}}'
+    master: '{{cluster.hosts.master}}'
+    primary: '{{cluster.hosts.primary}}'
+    secondary: '{{cluster.hosts.secondary}}'
+    workers:
+{% for worker in cluster.hosts.workers %}
+      - '{{worker}}'
+{% endfor %}
+
+  harmony:
+    server: '{{harmony.stack_outputs.PublicDNS}}'
+    version: '{{version}}'
+    patch: '{{patch}}'

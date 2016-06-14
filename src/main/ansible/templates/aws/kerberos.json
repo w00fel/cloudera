@@ -1,0 +1,382 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+    "Description" : "AWS CloudFormation Template for MIT Kerberos",
+    "Parameters" : {
+        "BuildBucket" : {
+            "Description" : "S3 bucket containing templates and scripts. [Don't change]",
+            "Type" : "String",
+            "Default" : "cleo-cdh-aws"
+        },
+
+        "ServerType" : {
+            "Description" : "EC2 instance type for the Kerberos Server",
+            "Type" : "String",
+            "Default" : "t2.small",
+            "AllowedValues" : [
+                "t2.micro",
+                "t2.small"
+            ]
+        },
+
+        "KeyName" : {
+            "Description" : "Name of an existing EC2 KeyPair",
+            "Type" : "AWS::EC2::KeyPair::KeyName"
+        },
+
+        "DNSZonePrivate" : {
+            "Description" : "Zone ID of the Private Hosted Route53 Zone",
+            "Type" : "AWS::Route53::HostedZone::Id"
+        },
+
+        "DNSZoneReverse" : {
+            "Description" : "Zone ID of the Reverse Hosted Route53 Zone",
+            "Type" : "AWS::Route53::HostedZone::Id"
+        },
+
+        "Subnet" : {
+            "Description" : "Subnet ID",
+            "Type" : "AWS::EC2::Subnet::Id"
+        },
+
+        "VPC" : {
+            "Description" : "VPC ID",
+            "Type" : "AWS::EC2::VPC::Id"
+        }
+    },
+
+    "Mappings" : {
+        "UbuntuAMI" : {
+            "Description" :    "Ubuntu Server 14.04 LTS (HVM), SSD Volume Type",
+            "us-east-1" :      { "AMI" : "ami-d05e75b8" },
+            "us-west-1" :      { "AMI" : "ami-df6a8b9b" },
+            "us-west-2" :      { "AMI" : "ami-5189a661" },
+            "eu-west-1" :      { "AMI" : "ami-47a23a30" },
+            "eu-central-1" :   { "AMI" : "ami-accff2b1" },
+            "ap-northeast-1" : { "AMI" : "ami-936d9d93" },
+            "ap-southeast-1" : { "AMI" : "ami-96f1c1c4" },
+            "ap-southeast-2" : { "AMI" : "ami-69631053" },
+            "sa-east-1" :      { "AMI" : "ami-4d883350" }
+        }
+    },
+
+    "Resources" : {
+        "SecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : { "Fn::Join" : [ "", [
+                    "Kerberos Server (", { "Ref" : "AWS::StackName" }, ")"
+                ]]},
+                "VpcId" : { "Ref" : "VPC" },
+                "SecurityGroupIngress" : [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort"   : "22",
+                        "ToPort"     : "22",
+                        "CidrIp"     : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort"   : "88",
+                        "ToPort"     : "88",
+                        "CidrIp"     : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort"   : "749",
+                        "ToPort"     : "751",
+                        "CidrIp"     : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "udp",
+                        "FromPort"   : "88",
+                        "ToPort"     : "88",
+                        "CidrIp"     : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "udp",
+                        "FromPort"   : "123",
+                        "ToPort"     : "123",
+                        "CidrIp"     : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "udp",
+                        "FromPort"   : "749",
+                        "ToPort"     : "751",
+                        "CidrIp"     : "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress" : [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort"   : "1",
+                        "ToPort"     : "65535",
+                        "CidrIp"     : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "udp",
+                        "FromPort"   : "1",
+                        "ToPort"     : "65535",
+                        "CidrIp"     : "0.0.0.0/0"
+                    }
+                ],
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : { "Fn::Join" : [ "", [
+                            "Kerberos Server (", { "Ref" : "AWS::StackName" }, ")"
+                        ]]}
+                    }
+                ]
+            }
+        },
+
+        "User" : {
+            "Type" : "AWS::IAM::User"
+        },
+
+        "AccessKey" : {
+            "Type" : "AWS::IAM::AccessKey",
+            "Properties" : {
+                "UserName" : { "Ref" : "User" }
+            }
+        },
+
+        "Role" : {
+            "Type" : "AWS::IAM::Role",
+            "Properties" : {
+                "AssumeRolePolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [{
+                        "Effect" : "Allow",
+                        "Principal" : { "Service": [ "ec2.amazonaws.com" ] },
+                        "Action" : [ "sts:AssumeRole" ]
+                    }]
+                }
+            }
+        },
+
+        "S3Policy" : {
+            "Type": "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "S3Policy",
+                "PolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "s3:GetObject"
+                            ],
+                            "Resource" : [ { "Fn::Join" : [ "", [
+                                "arn:aws:s3:::", { "Ref" : "BuildBucket" }, "/*"
+                            ]]}]
+                        }
+                    ]
+                },
+                "Roles" : [
+                    { "Ref" : "Role" }
+                ],
+                "Users" : [
+                    { "Ref" : "User" }
+                ]
+            }
+        },
+
+        "Route53Policy" : {
+            "Type" : "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "Route53Policy",
+                "PolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "route53:GetHostedZone",
+                                "route53:ListHostedZones",
+                                "route53:ListResourceRecordSets",
+                                "route53:ChangeResourceRecordSets"
+                            ],
+                            "Resource" : [
+                                "arn:aws:route53:::hostedzone/*"
+                            ]
+                        }
+                    ]
+                },
+                "Roles" : [
+                    { "Ref" : "Role" }
+                ],
+                "Users" : [
+                    { "Ref" : "User" }
+                ]
+            }
+        },
+
+        "TagsPolicy" : {
+            "Type": "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "TagsPolicy",
+                "PolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "ec2:DescribeTags"
+                            ],
+                            "Resource" : [
+                                "*"
+                            ]
+                        }
+                    ]
+                },
+                "Roles" : [
+                    { "Ref" : "Role" }
+                ],
+                "Users" : [
+                    { "Ref" : "User" }
+                ]
+            }
+        },
+
+        "InstanceProfile" : {
+            "Type" : "AWS::IAM::InstanceProfile",
+            "Properties" : {
+                "Roles" : [
+                    { "Ref" : "Role" }
+                ]
+            }
+        },
+
+        "Instance" : {
+            "Type" : "AWS::EC2::Instance",
+            "Metadata" : {
+                "AWS::CloudFormation::Authentication" : { "S3AccessCreds" : {
+                    "type"        : "S3",
+                    "buckets"     : [ { "Ref" : "BuildBucket" } ],
+                    "accessKeyId" : { "Ref" : "AccessKey" },
+                    "secretKey"   : { "Fn::GetAtt" : ["AccessKey", "SecretAccessKey"] }
+                }},
+                "AWS::CloudFormation::Init" : { "config" : {
+                    "files" : {
+                        "/etc/krb5.conf" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                "kerberos", "krb5.conf"
+                            ]]},
+                            "mode" : "000644"
+                        },
+                        "/etc/krb5kdc/kadm5.acl" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                "kerberos", "kadm5.acl"
+                            ]]},
+                            "mode" : "000644"
+                        },
+                        "/etc/krb5kdc/kdc.conf" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                "kerberos", "kdc.conf"
+                            ]]},
+                            "mode" : "000644"
+                        },
+                        "/home/ubuntu/kerberos.sh" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                    "kerberos", "kerberos.sh"
+                            ]]},
+                            "mode" : "000755"
+                        },
+                        "/home/ubuntu/route53.sh" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                    "aws", "route53.sh"
+                            ]]},
+                            "context" : {
+                                "region"        : { "Ref" : "AWS::Region" },
+                                "privateZone"   : { "Ref" : "DNSZonePrivate" },
+                                "reverseZone"   : { "Ref" : "DNSZoneReverse" }
+                            },
+                            "mode" : "000755"
+                        }
+                    }
+                }}
+            },
+            "Properties" : {
+                "InstanceType" : { "Ref" : "ServerType" },
+                "IamInstanceProfile" : { "Ref" : "InstanceProfile" },
+                "KeyName"  : { "Ref" : "KeyName" },
+                "ImageId"  : { "Fn::FindInMap": [ "UbuntuAMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                "NetworkInterfaces" : [{
+                    "GroupSet"                 : [{ "Ref" : "SecurityGroup" }],
+                    "SubnetId"                 : {  "Ref" : "Subnet" },
+                    "AssociatePublicIpAddress" : "true",
+                    "DeleteOnTermination"      : "true",
+                    "DeviceIndex"              : "0"
+                }],
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : { "Fn::Join" : [ "", [
+                            "Kerberos Server ", " (", { "Ref" : "AWS::StackName" }, ")"
+                        ]]}
+                    },
+                    {
+                        "Key" : "group",
+                        "Value" : "kerberos"
+                    }
+                ],
+                "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [
+                    "#!/bin/bash -ex\n",
+                    "export DEBIAN_FRONTEND=noninteractive\n",
+                    "apt-get -m update\n",
+                    "apt-get -q -y install krb5-config\n",
+                    "apt-get -q -y install krb5-kdc\n",
+                    "apt-get -q -y install krb5-admin-server\n",
+                    "apt-get -y install unzip\n",
+                    "apt-get -y install python-setuptools\n",
+                    "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
+                    "#\n",
+                    "cfn-init --stack ", { "Ref" : "AWS::StackName" },
+                    "    --resource Instance",
+                    "    --region ", { "Ref" : "AWS::Region" }, "\n",
+                    "#\n",
+                    "/home/ubuntu/route53.sh\n",
+                    "/home/ubuntu/kerberos.sh\n",
+                    "#\n",
+                    "cfn-signal --exit-code $? '", { "Ref" : "WaitHandle" }, "'\n"
+                ]]}}
+            }
+        },
+
+        "WaitHandle" : {
+            "Type" : "AWS::CloudFormation::WaitConditionHandle"
+        },
+
+        "WaitCondition" : {
+            "Type" : "AWS::CloudFormation::WaitCondition",
+            "DependsOn" : "Instance",
+            "Properties" : {
+                "Handle" : {
+                    "Ref" : "WaitHandle"
+                },
+                "Timeout" : "3600"
+            }
+        }
+    },
+
+    "Outputs" : {
+        "StackName" : {
+            "Description" : "AWS CloudFormation Stack Name",
+            "Value" : { "Ref" : "AWS::StackName" }
+        },
+        "PublicIP" : {
+            "Description" : "IP Address of the Kerberos Server",
+            "Value" : { "Fn::GetAtt" : ["Instance", "PublicIp"] }
+        },
+        "PublicDNS" : {
+            "Description" : "Host Name of the Kerberos Server",
+            "Value" : { "Fn::GetAtt" : ["Instance", "PublicDnsName"] }
+        }
+    }
+}

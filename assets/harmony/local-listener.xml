@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Host alias="Local Listener" application="" by="w00fel" class="com.cleo.lexicom.beans.LexLocalHostBean" enabled="True" local="True" localencrcertalias="" localencrcertpassword="" localsigncertalias="" localsigncertpassword="" modified="2015/11/25 00:00:00" preconfigured="2015/11/25 00:00:00" ready="True" transport="HTTP, FTP and SOAP Services" type="">
+  <Allowexpiredcerts>True</Allowexpiredcerts>
+  <Autostartup>False</Autostartup>
+  <Clientauthoptional>False</Clientauthoptional>
+  <Connecttype>0</Connecttype>
+  <Ftpisselected>True</Ftpisselected>
+  <Ftppassivemodeisselected>True</Ftppassivemodeisselected>
+  <Ftppasvhighport>20999</Ftppasvhighport>
+  <Ftppasvlowport>20900</Ftppasvlowport>
+  <Ftpport>10021</Ftpport>
+  <Ftpsauthisselected>False</Ftpsauthisselected>
+  <Ftpsimplisselected>False</Ftpsimplisselected>
+  <Ftpsreadonly>False</Ftpsreadonly>
+  <Httpisselected>True</Httpisselected>
+  <Httpport>5080</Httpport>
+  <Httpsisselected>False</Httpsisselected>
+  <Httpsreadonly>False</Httpsreadonly>
+  <Index>0</Index>
+  <Indexdate>-1</Indexdate>
+  <Internal>0</Internal>
+  <Isdnoftpisselected>False</Isdnoftpisselected>
+  <Lastcemresponsecheckdate>-1</Lastcemresponsecheckdate>
+  <Lastcertexpirationcheckdate>-1</Lastcertexpirationcheckdate>
+  <Lastemailexecutedate>-1</Lastemailexecutedate>
+  <Logignoredisdncalls>True</Logignoredisdncalls>
+  <Oftpsreadonly>False</Oftpsreadonly>
+  <Origin>Local Listener</Origin>
+  <Port>0</Port>
+  <Requireclientauthisselected>False</Requireclientauthisselected>
+  <Requireftpclientauthisselected>False</Requireftpclientauthisselected>
+  <Requireoftpclientauthisselected>False</Requireoftpclientauthisselected>
+  <Requiresmtpclientauthisselected>False</Requiresmtpclientauthisselected>
+  <Runninglocalrequired>True</Runninglocalrequired>
+  <Secureportrequired>False</Secureportrequired>
+  <Securetcpipoftpisselected>False</Securetcpipoftpisselected>
+  <Securetcpipoftpport>6619</Securetcpipoftpport>
+  <Smtpisselected>False</Smtpisselected>
+  <Smtpsreadonly>False</Smtpsreadonly>
+  <Smtpsstarttlsisselected>False</Smtpsstarttlsisselected>
+  <Smtpsstarttlsrequired>False</Smtpsstarttlsrequired>
+  <Sshftpisselected>False</Sshftpisselected>
+  <Sshftpport>22</Sshftpport>
+  <Sshftpreadonly>False</Sshftpreadonly>
+  <Tcpipoftpisselected>False</Tcpipoftpisselected>
+  <Tcpipoftpport>3305</Tcpipoftpport>
+  <Threadcount>0</Threadcount>
+  <Usesamecerts>True</Usesamecerts>
+  <Advanced>UnknownPartnerMessageAction=Save Payload</Advanced>
+  <Service alias="Web Service" by="w00fel" class="com.cleo.lexicom.beans.WebService" enabled="True" modified="2015/11/25 00:00:00" ready="True">
+    <Allowwebaccesstologsdirectory>False</Allowwebaccesstologsdirectory>
+    <Generalpurpose>True</Generalpurpose>
+    <Password>bubbles</Password>
+    <Restresourceenabled>True</Restresourceenabled>
+    <Restresourcepath>/api</Restresourcepath>
+    <Soapresourceenabled>True</Soapresourceenabled>
+    <Tradelink>False</Tradelink>
+    <Usearrays>True</Usearrays>
+    <Wsdlonedottwocompliant>False</Wsdlonedottwocompliant>
+  </Service>
+</Host>

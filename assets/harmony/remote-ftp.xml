@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Host alias="Remote FTP Hosts" application="" by="w00fel" class="com.cleo.lexicom.beans.ftpbean.FtpHost" enabled="True" local="False" modified="2015/11/25 00:00:00" preconfigured="2015/11/25 00:00:00" ready="True" transport="FTP" type="">
+  <Activedataporthigh>0</Activedataporthigh>
+  <Activedataportlow>0</Activedataportlow>
+  <Address>localhost</Address>
+  <Connecttype>0</Connecttype>
+  <Datachannelmode>Passive</Datachannelmode>
+  <Datatype>Binary</Datatype>
+  <Inbox>inbox/</Inbox>
+  <Index>0</Index>
+  <Indexdate>-1</Indexdate>
+  <Internal>0</Internal>
+  <Origin>Generic FTP</Origin>
+  <Outbox>outbox/</Outbox>
+  <Passivedataporthigh>0</Passivedataporthigh>
+  <Passivedataportlow>0</Passivedataportlow>
+  <Port>10021</Port>
+  <Runninglocalrequired>False</Runninglocalrequired>
+  <Substitutepassiveipaddress>False</Substitutepassiveipaddress>
+  <Advanced>XMLEncryptionAlgorithm=System Default</Advanced>
+  <Advanced>PGPHashAlgorithm=SHA-256</Advanced>
+  <Advanced>AddMailboxAliasDirectoryToOutbox=true</Advanced>
+  <Advanced>AddMailboxAliasDirectoryToReceivedbox=true</Advanced>
+  <Advanced>RetrieveDirectorySort= </Advanced>
+  <Advanced>UseNLST=true</Advanced>
+  <Advanced>OutboxSort=System Default</Advanced>
+  <Advanced>PGPEncryptionAlgorithm=TripleDES</Advanced>
+  <Advanced>ZipCompressionLevel=System Default</Advanced>
+  <Advanced>AddMailboxAliasDirectoryToInbox=true</Advanced>
+  <Advanced>PGPCompressionAlgorithm=ZIP</Advanced>
+  <Advanced>AddMailboxAliasDirectoryToSentbox=true</Advanced>
+  <Advanced>FileListParseMethod= </Advanced>
+  <Mailbox alias="loopback" by="woofel" class="com.cleo.lexicom.beans.ftpbean.FtpMailbox" enabled="True" modified="2015/11/25 00:00:00" ready="True">
+    <Lastclientemailexecutedate>-1</Lastclientemailexecutedate>
+    <Lastserveremailexecutedate>-1</Lastserveremailexecutedate>
+    <Localpackaging>None</Localpackaging>
+    <Nopasswordrequired>False</Nopasswordrequired>
+    <Partneroverridelistenercert>true</Partneroverridelistenercert>
+    <Username>remote</Username>
+    <Password>cleo</Password>
+    <Action alias="receive" by="w00fel" class="com.cleo.lexicom.beans.ftpbean.FtpAction" enabled="True" modified="2015/11/25 00:00:00" ready="True">
+      <Commands># Receive all files from remote host
+GET outbox/*</Commands>
+    </Action>
+    <Action alias="send" by="w00fel" class="com.cleo.lexicom.beans.ftpbean.FtpAction" enabled="True" modified="2015/11/25 00:00:00" ready="True">
+      <Commands># Send files to remote host
+PUT -DEL * inbox/</Commands>
+    </Action>
+    <Action alias="append" by="w00fel" class="com.cleo.lexicom.beans.ftpbean.FtpAction" enabled="True" modified="2015/11/25 00:00:00" ready="True">
+      <Commands># Send files to remote host
+PUT -DEL -APE * inbox/</Commands>
+    </Action>
+  </Mailbox>
+</Host>

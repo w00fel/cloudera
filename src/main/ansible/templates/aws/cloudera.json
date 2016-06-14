@@ -1,0 +1,706 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+    "Description" : "AWS CloudFormation Template for Cloudera CDH",
+    "Parameters" : {
+        "BuildBucket" : {
+            "Description" : "S3 bucket containing templates and scripts. [Don't change]",
+            "Type" : "String",
+            "Default" : "cleo-cdh-aws"
+        },
+
+        "ClusterConfig" : {
+            "Description" : "Cluster configuration file name",
+            "Type" : "String",
+            "Default" : "cluster.conf"
+        },
+
+        "ClusterDirectorType" : {
+            "Description" : "EC2 instance type for the CDH Director",
+            "Type" : "String",
+            "Default" : "t2.large",
+            "AllowedValues" : [
+                "t2.large",
+                "m4.large",
+                "m4.xlarge"
+            ]
+        },
+
+        "ClusterManagerType" : {
+            "Description" : "EC2 instance type for the CDH Manager",
+            "Type" : "String",
+            "Default" : "m4.xlarge",
+            "AllowedValues" : [
+                "t2.large",
+                "m4.large",
+                "m4.xlarge"
+            ]
+        },
+
+        "ClusterMasterType" : {
+            "Description" : "EC2 instance type for the CDH Master",
+            "Type" : "String",
+            "Default" : "m4.large",
+            "AllowedValues" : [
+                "t2.large",
+                "m4.large",
+                "m4.xlarge"
+            ]
+        },
+
+        "ClusterWorkerType" : {
+            "Description" : "EC2 instance type for the CDH Worker",
+            "Type" : "String",
+            "Default" : "m4.large",
+            "AllowedValues" : [
+                "t2.large",
+                "m4.large",
+                "m4.xlarge",
+                "i2.xlarge"
+            ]
+        },
+
+        "ClusterWorkerCount" : {
+            "Description" : "The number of CDH Worker instances to start",
+            "Type" : "String",
+            "Default" : "3",
+            "MinLength" : "1",
+            "MaxLength" : "2",
+            "AllowedPattern" : "[0-9]+"
+        },
+
+        "DNSZonePrivate" : {
+            "Description" : "Zone ID of the Private Hosted Route53 Zone",
+            "Type" : "AWS::Route53::HostedZone::Id"
+        },
+
+        "DNSZoneReverse" : {
+            "Description" : "Zone ID of the Reverse Hosted Route53 Zone",
+            "Type" : "AWS::Route53::HostedZone::Id"
+        },
+
+        "KerberosHost" : {
+            "Description" : "Kerberos server",
+            "Type" : "String"
+        },
+
+        "KeyName" : {
+            "Description" : "Name of an existing EC2 KeyPair",
+            "Type" : "AWS::EC2::KeyPair::KeyName"
+        },
+
+        "PrivateKeyURL" : {
+            "Description" : "Private Key URL",
+            "Type" : "String"
+        },
+
+        "Subnet" : {
+            "Description" : "Subnet ID",
+            "Type" : "AWS::EC2::Subnet::Id"
+        },
+
+        "VPC" : {
+            "Description" : "VPC ID",
+            "Type" : "AWS::EC2::VPC::Id"
+        }
+    },
+
+    "Mappings" : {
+        "RedHatAMI" : {
+            "Description" :    "RHEL-6.5_GA_HVM-20140929-x86_64-11-Hourly2-GP2",
+            "us-east-1" :      { "AMI" : "ami-00a11e68" },
+            "us-west-1" :      { "AMI" : "ami-4b3f350e" },
+            "us-west-2" :      { "AMI" : "ami-11125e21" },
+            "eu-west-1" :      { "AMI" : "ami-04a00d73" },
+            "eu-central-1" :   { "AMI" : "ami-008ebf1d" },
+            "ap-northeast-1" : { "AMI" : "ami-abb682aa" },
+            "ap-southeast-1" : { "AMI" : "ami-ce1f399c" },
+            "ap-southeast-2" : { "AMI" : "ami-0d254837" },
+            "sa-east-1" :      { "AMI" : "ami-df06b3c2" }
+        },
+        "UbuntuAMI" : {
+            "Description" :    "Ubuntu Server 14.04 LTS (HVM), SSD Volume Type",
+            "us-east-1" :      { "AMI" : "ami-d05e75b8" },
+            "us-west-1" :      { "AMI" : "ami-df6a8b9b" },
+            "us-west-2" :      { "AMI" : "ami-5189a661" },
+            "eu-west-1" :      { "AMI" : "ami-47a23a30" },
+            "eu-central-1" :   { "AMI" : "ami-accff2b1" },
+            "ap-northeast-1" : { "AMI" : "ami-936d9d93" },
+            "ap-southeast-1" : { "AMI" : "ami-96f1c1c4" },
+            "ap-southeast-2" : { "AMI" : "ami-69631053" },
+            "sa-east-1" :      { "AMI" : "ami-4d883350" }
+        }
+    },
+
+    "Resources" : {
+        "SecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : { "Fn::Join" : [ "", [
+                    "CDH Cluster(", { "Ref" : "AWS::StackName" }, ")"
+                ]]},
+                "VpcId" : { "Ref" : "VPC" },
+                "SecurityGroupIngress" : [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort"   : "22",
+                        "ToPort"     : "22",
+                        "CidrIp"     : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort"   : "1",
+                        "ToPort"     : "65535",
+                        "CidrIp"     : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "udp",
+                        "FromPort"   : "123",
+                        "ToPort"     : "123",
+                        "CidrIp"     : "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress" : [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort"   : "1",
+                        "ToPort"     : "65535",
+                        "CidrIp"     : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "udp",
+                        "FromPort"   : "1",
+                        "ToPort"     : "65535",
+                        "CidrIp"     : "0.0.0.0/0"
+                    }
+                ],
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : { "Fn::Join" : [ "", [
+                            "CDH Cluster (", { "Ref" : "AWS::StackName" }, ")"
+                        ]]}
+                    }
+                ]
+            }
+        },
+
+        "ClusterConductorQueue" : {
+            "Type": "AWS::SQS::Queue"
+        },
+
+        "ClusterConductorTopic" : {
+            "Type" : "AWS::SNS::Topic",
+            "Properties" : {
+                "Subscription" : [{
+                    "Endpoint" : { "Fn::GetAtt": ["ClusterConductorQueue", "Arn"] },
+                    "Protocol" : "sqs"
+                }]
+            }
+        },
+
+        "ClusterDirectorUser" : {
+            "Type" : "AWS::IAM::User"
+        },
+
+        "ClusterDirectorAccessKey" : {
+            "Type" : "AWS::IAM::AccessKey",
+            "Properties" : {
+                "UserName" : { "Ref" : "ClusterDirectorUser" }
+            }
+        },
+
+        "ClusterDirectorRole" : {
+            "Type" : "AWS::IAM::Role",
+            "Properties" : {
+                "AssumeRolePolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [{
+                        "Effect" : "Allow",
+                        "Principal" : { "Service": [ "ec2.amazonaws.com" ] },
+                        "Action" : [ "sts:AssumeRole" ]
+                    }]
+                }
+            }
+        },
+
+        "ClusterNodeRole" : {
+            "Type" : "AWS::IAM::Role",
+            "Properties" : {
+                "AssumeRolePolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [{
+                        "Effect" : "Allow",
+                        "Principal" : { "Service": [ "ec2.amazonaws.com" ] },
+                        "Action" : [ "sts:AssumeRole" ]
+                    }]
+                }
+            }
+        },
+
+        "ClusterIAMPolicy" : {
+            "Type": "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "ClusterIAM",
+                "PolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "iam:GetInstanceProfile",
+                                "iam:PassRole"
+                            ],
+                            "Resource" : [
+                                "*"
+                            ]
+                        }
+                    ]
+                },
+                "Roles" : [
+                    { "Ref" : "ClusterDirectorRole" }
+                ],
+                "Users" : [
+                    { "Ref" : "ClusterDirectorUser" }
+                ]
+            }
+        },
+
+        "ClusterQueuePolicy" : {
+            "Type": "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "ClusterSQS",
+                "PolicyDocument" : {
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "sqs:DeleteMessage",
+                                "sqs:ReceiveMessage",
+                                "sqs:ChangeMessageVisibility"
+                            ],
+                            "Resource" : [{
+                                    "Fn::GetAtt": ["ClusterConductorQueue", "Arn"]
+                            }]
+                        }
+                    ]
+                },
+                "Roles" : [
+                    { "Ref" : "ClusterDirectorRole" }
+                ],
+                "Users" : [
+                    { "Ref" : "ClusterDirectorUser" }
+                ]
+            }
+        },
+
+        "ClusterTopicPolicy" : {
+            "Type" : "AWS::SQS::QueuePolicy",
+            "Properties" : {
+                "PolicyDocument" : {
+                    "Id" : "TopicToQueuePolicy",
+                    "Statement" : [
+                        {
+                            "Sid" : "Allow-SendMessage-To-Queue-From-SNS-Topic",
+                            "Effect" : "Allow",
+                            "Principal" : {
+                                "AWS" : "*"
+                            },
+                            "Action" : ["sqs:SendMessage"],
+                            "Resource" : "*",
+                            "Condition" : {
+                                "ArnEquals" : {
+                                    "aws:SourceArn" : {
+                                        "Ref" : "ClusterConductorTopic"
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                "Queues": [{
+                        "Ref": "ClusterConductorQueue"
+                }]
+            }
+        },
+
+        "ClusterS3Policy" : {
+            "Type": "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "ClusterS3",
+                "PolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "s3:PutObject",
+                                "s3:GetObject",
+                                "s3:DeleteObject"
+                            ],
+                            "Resource" : [ { "Fn::Join" : [ "", [
+                                "arn:aws:s3:::", { "Ref" : "BuildBucket" }, "/*"
+                            ]]}]
+                        }
+                    ]
+                },
+                "Roles" : [
+                    { "Ref" : "ClusterDirectorRole" }
+                ],
+                "Users" : [
+                    { "Ref" : "ClusterDirectorUser" }
+                ]
+            }
+        },
+
+        "ClusterTagsPolicy" : {
+            "Type": "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "ClusterTags",
+                "PolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "ec2:DescribeTags"
+                            ],
+                            "Resource" : [
+                                "*"
+                            ]
+                        }
+                    ]
+                },
+                "Roles" : [
+                    { "Ref" : "ClusterDirectorRole" },
+                    { "Ref" : "ClusterNodeRole" }
+                ],
+                "Users" : [
+                    { "Ref" : "ClusterDirectorUser" }
+                ]
+            }
+        },
+
+        "ClusterCreatePolicy" : {
+            "Type" : "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "ClusterCreate",
+                "PolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "cloudformation:Describe*",
+                                "ec2:CreateTags",
+                                "ec2:DescribeAvailabilityZones",
+                                "ec2:DescribeImages",
+                                "ec2:DescribeInstanceStatus",
+                                "ec2:DescribeInstances",
+                                "ec2:DescribeKeyPairs",
+                                "ec2:DescribePlacementGroups",
+                                "ec2:DescribeRegions",
+                                "ec2:DescribeSecurityGroups",
+                                "ec2:DescribeSubnets",
+                                "ec2:RunInstances",
+                                "ec2:TerminateInstances",
+                                "rds:CreateDBInstance",
+                                "rds:DeleteDBInstance",
+                                "rds:DescribeDBInstances",
+                                "rds:DescribeDBSecurityGroups",
+                                "sts:DecodeAuthorizationMessage"
+                            ],
+                            "Resource" : [
+                                "*"
+                            ]
+                        }
+                    ]
+                },
+                "Roles" : [
+                    { "Ref" : "ClusterDirectorRole" }
+                ],
+                "Users": [
+                    { "Ref" : "ClusterDirectorUser" }
+                ]
+            }
+        },
+
+        "ClusterRoute53Policy" : {
+            "Type" : "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "ClusterRoute53",
+                "PolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "route53:GetHostedZone",
+                                "route53:ListHostedZones",
+                                "route53:ListResourceRecordSets",
+                                "route53:ChangeResourceRecordSets"
+                            ],
+                            "Resource" : [
+                                "arn:aws:route53:::hostedzone/*"
+                            ]
+                        }
+                    ]
+                },
+                "Roles" : [
+                    { "Ref" : "ClusterDirectorRole" },
+                    { "Ref" : "ClusterNodeRole" }
+                ],
+                "Users" : [
+                    { "Ref" : "ClusterDirectorUser" }
+                ]
+            }
+        },
+
+        "ClusterDirectorInstanceProfile" : {
+            "Type" : "AWS::IAM::InstanceProfile",
+            "Properties" : {
+                "Roles" : [
+                    { "Ref" : "ClusterDirectorRole" }
+                ]
+            }
+        },
+
+        "ClusterNodeInstanceProfile" : {
+            "Type" : "AWS::IAM::InstanceProfile",
+            "Properties" : {
+                "Roles" : [
+                    { "Ref" : "ClusterNodeRole" }
+                ]
+            }
+        },
+
+        "ClusterDirectorInstance" : {
+            "Type" : "AWS::EC2::Instance",
+            "DependsOn" : [
+                "ClusterIAMPolicy",
+                "ClusterQueuePolicy",
+                "ClusterTopicPolicy",
+                "ClusterS3Policy",
+                "ClusterTagsPolicy",
+                "ClusterCreatePolicy",
+                "ClusterRoute53Policy"
+            ],
+            "Metadata" : {
+                "AWS::CloudFormation::Authentication" : { "S3AccessCreds" : {
+                    "type"        : "S3",
+                    "buckets"     : [ { "Ref" : "BuildBucket" } ],
+                    "accessKeyId" : { "Ref" : "ClusterDirectorAccessKey" },
+                    "secretKey"   : { "Fn::GetAtt" : ["ClusterDirectorAccessKey", "SecretAccessKey"] }
+                }},
+                "AWS::CloudFormation::Init" : { "config" : {
+                    "files" : {
+                        "/home/ubuntu/cloudera/cluster.conf" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                    "cloudera", { "Ref" : "ClusterConfig" }
+                            ]]},
+                            "context" : {
+                                "stack"         : { "Ref" : "AWS::StackName" },
+                                "region"        : { "Ref" : "AWS::Region" },
+                                "subnet"        : { "Ref" : "Subnet" },
+                                "securityGroup" : { "Ref" : "SecurityGroup" },
+                                "kdcHost"       : { "Ref" : "KerberosHost" },
+                                "managerType"   : { "Ref" : "ClusterManagerType" },
+                                "masterType"    : { "Ref" : "ClusterMasterType" },
+                                "workerType"    : { "Ref" : "ClusterWorkerType" },
+                                "workerCount"   : { "Ref" : "ClusterWorkerCount" },
+                                "nodeProfile"   : { "Ref" : "ClusterNodeInstanceProfile" },
+                                "clusterImage"  : {
+                                    "Fn::FindInMap" : [ "RedHatAMI", { "Ref" : "AWS::Region" }, "AMI" ]
+                                }
+                            }
+                        },
+                        "/home/ubuntu/cloudera/enable-hdfs-ha.py" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                    "cloudera", "enable-hdfs-ha.py"
+                            ]]},
+                            "mode" : "000755"
+                        },
+                        "/home/ubuntu/cloudera/kerberize.py" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                    "cloudera", "kerberize.py"
+                            ]]},
+                            "mode" : "000755"
+                        },
+                        "/home/ubuntu/cloudera/bootstrap.py" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                    "cloudera", "bootstrap.py"
+                            ]]},
+                            "context" : {
+                                "privateZone"   : { "Ref" : "DNSZonePrivate" },
+                                "reverseZone"   : { "Ref" : "DNSZoneReverse" }
+                            },
+                            "mode" : "000755"
+                        },
+                        "/home/ubuntu/cloudera/teardown.py" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                    "cloudera", "teardown.py"
+                            ]]},
+                            "context" : {
+                                "privateZone"   : { "Ref" : "DNSZonePrivate" },
+                                "reverseZone"   : { "Ref" : "DNSZoneReverse" }
+                            },
+                            "mode" : "000755"
+                        },
+                        "/home/ubuntu/route53.sh" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                    "aws", "route53.sh"
+                            ]]},
+                            "context" : {
+                                "region"        : { "Ref" : "AWS::Region" },
+                                "privateZone"   : { "Ref" : "DNSZonePrivate" },
+                                "reverseZone"   : { "Ref" : "DNSZoneReverse" }
+                            },
+                            "mode" : "000755"
+                        },
+                        "/home/ubuntu/.ssh/id_rsa" : {
+                            "source" : { "Ref" : "PrivateKeyURL" },
+                            "mode" : "000400"
+                        },
+                        "/etc/cfn/cfn-resource-bridge.conf" : {
+                            "source" : { "Fn::Join" : [ "/", [
+                                "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                    "aws", "cfn-resource-bridge.conf"
+                            ]]},
+                            "context" : {
+                                "queue_url" : { "Ref": "ClusterConductorQueue" }
+                            },
+                            "mode" : "000644",
+                            "owner" : "root",
+                            "group" : "root"
+                        }
+                    },
+                    "packages" : {
+                        "apt" : {
+                            "default-jre" : []
+                        }
+                    },
+                    "sources" : {
+                        "/etc/cfn" : { "Fn::Join" : [ "/", [
+                            "https://s3.amazonaws.com", { "Ref" : "BuildBucket" },
+                                "aws", "cfn-resource-bridge.zip"
+                        ]]}
+                    },
+                    "commands" : {
+                        "00_install_cfn_resource_bridge" : {
+                            "command" : "python setup.py install",
+                            "cwd" : "/etc/cfn/cfn-resource-bridge"
+                        },
+                        "01_install_cfn_resource_bridge" : {
+                            "command" : "cp cfn-resource-bridge /etc/init.d",
+                            "cwd" : "/etc/cfn/cfn-resource-bridge/init/ubuntu"
+                        },
+                        "02_install_cfn_resource_bridge" : {
+                            "command" : "chmod 755 /etc/init.d/cfn-resource-bridge"
+                        },
+                        "03_install_cfn_resource_bridge" : {
+                            "command" : "update-rc.d cfn-resource-bridge defaults"
+                        },
+                        "10_run_cfn_resource_bridge" : {
+                            "command" : "service cfn-resource-bridge start"
+                        }
+                    }
+                }}
+            },
+            "Properties" : {
+                "InstanceType" : { "Ref" : "ClusterDirectorType" },
+                "IamInstanceProfile" : { "Ref" : "ClusterDirectorInstanceProfile" },
+                "KeyName"  : { "Ref" : "KeyName" },
+                "ImageId"  : { "Fn::FindInMap" : [ "UbuntuAMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                "NetworkInterfaces" : [{
+                    "GroupSet"                 : [{ "Ref" : "SecurityGroup" }],
+                    "SubnetId"                 : {  "Ref" : "Subnet" },
+                    "AssociatePublicIpAddress" : "true",
+                    "DeleteOnTermination"      : "true",
+                    "DeviceIndex"              : "0"
+                }],
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : { "Fn::Join" : [ "", [
+                            "CDH Cluster Director (", { "Ref" : "AWS::StackName" }, ")"
+                        ]]}
+                    },
+                    {
+                        "Key" : "group",
+                        "Value" : "director"
+                    }
+                ],
+                "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [
+                    "#!/bin/bash -ex\n",
+                    "apt-get -m update\n",
+                    "apt-get -y install python-setuptools\n",
+                    "apt-get -y install python-pip\n",
+                    "pip install awscli\n",
+                    "pip install boto\n",
+                    "pip install retrying\n",
+                    "pip install https://pypi.python.org/packages/source/c/cm-api/cm_api-10.0.0.tar.gz\n",
+                    "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
+                    "#\n",
+                    "cfn-init --stack ", { "Ref" : "AWS::StackName" },
+                    "    --resource ClusterDirectorInstance",
+                    "    --region ", { "Ref" : "AWS::Region" }, "\n",
+                    "#\n",
+                    "/home/ubuntu/route53.sh\n",
+                    "wget http://archive.cloudera.com/director/director/2/cloudera-director-client-2.0.0-director2.0.0.tar.gz",
+                    "    -O /home/ubuntu/cloudera/director-client.tar.gz\n",
+                    "tar -xzf /home/ubuntu/cloudera/director-client.tar.gz -C /home/ubuntu/cloudera\n",
+                    "mv /home/ubuntu/cloudera/cloudera-director-2.0.0 /home/ubuntu/cloudera/director-client\n",
+                    "chown -R ubuntu:ubuntu /home/ubuntu\n",
+                    "#\n",
+                    "cfn-signal --exit-code $? '", { "Ref" : "ClusterDirectorWaitHandle" }, "'\n"
+                ]]}}
+            }
+        },
+
+        "ClusterDirectorWaitHandle" : {
+            "Type" : "AWS::CloudFormation::WaitConditionHandle"
+        },
+
+        "ClusterDirectorWaitCondition" : {
+            "Type" : "AWS::CloudFormation::WaitCondition",
+            "Description" : "Wait for the Cluster Director to finish initializing",
+            "DependsOn" : "ClusterDirectorInstance",
+            "Properties" : {
+                "Handle" : {
+                    "Ref" : "ClusterDirectorWaitHandle"
+                },
+                "Timeout" : "5400"
+            }
+        },
+
+        "ClusterConductor" : {
+            "Type" : "Custom::ClusterConductor",
+            "Description" : "Bootstrap the Cluster",
+            "Version" : "1.0",
+            "DependsOn" : "ClusterDirectorWaitCondition",
+            "Properties" : {
+                "ServiceToken" : { "Ref" : "ClusterConductorTopic" }
+            }
+        }
+    },
+
+    "Outputs" : {
+        "StackName" : {
+            "Description" : "AWS CloudFormation Stack Name",
+            "Value" : { "Ref" : "AWS::StackName" }
+        },
+        "PublicIP" : {
+            "Description" : "IP Address of the Cluster Director",
+            "Value" : { "Fn::GetAtt" : ["ClusterDirectorInstance", "PublicIp"] }
+        },
+        "PublicDNS" : {
+            "Description" : "Host Name of the Cluster Director",
+            "Value" : { "Fn::GetAtt" : ["ClusterDirectorInstance", "PublicDnsName"] }
+        }
+    }
+}

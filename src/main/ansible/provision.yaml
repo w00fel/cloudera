@@ -1,0 +1,154 @@
+---
+- name: Provision AWS Infrastructure/Kerberos/Cloudera/Harmony
+  hosts: localhost
+  vars:
+    - timestamp: '{{ansible_date_time.epoch}}'
+  vars_files:
+    - bootstrap.conf
+
+  tasks:
+    #
+    # Load variable or initialize defaults
+    #
+    - name: Initialize Variables
+      include_vars: '{{item}}'
+      with_first_found:
+        - 'vars-config.yaml'
+        - 'vars/defaults.yaml'
+
+    - name: Create Playbook Configuration
+      template:
+        src: 'templates/vars-config.yaml.j2'
+        dest: '{{playbook_dir}}/vars-config.yaml'
+
+    #
+    # Create the EC2 Key Pair (if necessary) and store in the temporary key bucket
+    #
+    - name: Create EC2 Key Pair
+      ec2_key:
+        region: '{{region}}'
+        name: '{{ssh_key_name}}'
+      register: keypair
+
+    - name: Save SSH Private Key to Local File
+      copy:
+        dest: '{{ssh_private_key_path}}'
+        content: '{{keypair.key.private_key}}'
+        mode: 0400
+      when: keypair.changed
+
+    - name: Create S3 Key Bucket
+      s3:
+        mode: create
+        region: '{{region}}'
+        bucket: '{{ssh_key_bucket}}'
+      when: keypair.changed
+
+    - name: Upload SSH Private Key to S3 Key Bucket
+      s3:
+        mode: put
+        region: '{{region}}'
+        bucket: '{{ssh_key_bucket}}'
+        object: '{{ssh_private_key_file}}'
+        src: '{{ssh_private_key_path}}'
+        expiration: 9000
+      register: endpoint
+      when: keypair.changed
+
+    - name: Get SSH Private Key URL
+      set_fact:
+        ssh_private_key_url: '{{endpoint.url}}'
+      when: keypair.changed
+
+    - name: Update Playbook Configuration
+      template:
+        src: 'templates/vars-config.yaml.j2'
+        dest: '{{playbook_dir}}/vars-config.yaml'
+      when: keypair.changed
+
+    #
+    # Create the AWS infrastructure
+    #
+    - name: Provision Infrastructure
+      cloudformation:
+        state: present
+        region: '{{region}}'
+        stack_name: '{{infrastructure_stack}}'
+        template: '{{infrastructure_template}}'
+      register: infrastructure
+
+    #
+    # Deploy/Configure the Kerberos server
+    #
+    - name: Provision Kerberos
+      cloudformation:
+        state: present
+        region: '{{region}}'
+        stack_name: '{{kerberos_stack}}'
+        disable_rollback: false
+        template: '{{kerberos_template}}'
+        template_parameters:
+          VPC: '{{infrastructure.stack_outputs.VPC}}'
+          Subnet: '{{infrastructure.stack_outputs.Subnet}}'
+          KeyName: '{{ssh_key_name}}'
+          DNSZonePrivate: '{{infrastructure.stack_outputs.DNSZonePrivate}}'
+          DNSZoneReverse: '{{infrastructure.stack_outputs.DNSZoneReverse}}'
+      register: kerberos
+
+    #
+    # Deploy/Configure the Cloudera CDH cluster
+    #
+    - name: Provision Cluster
+      cloudformation:
+        state: present
+        region: '{{region}}'
+        stack_name: '{{cloudera_stack}}'
+        template: '{{cloudera_template}}'
+        disable_rollback: false
+        template_parameters:
+          VPC: '{{infrastructure.stack_outputs.VPC}}'
+          Subnet: '{{infrastructure.stack_outputs.Subnet}}'
+          KeyName: '{{ssh_key_name}}'
+          PrivateKeyURL: '{{ssh_private_key_url}}'
+          KerberosHost: '{{kerberos.stack_outputs.PublicDNS}}'
+          DNSZonePrivate: '{{infrastructure.stack_outputs.DNSZonePrivate}}'
+          DNSZoneReverse: '{{infrastructure.stack_outputs.DNSZoneReverse}}'
+      register: cloudera
+
+    - name: Get Cluster Configuration
+      route53:
+        region: '{{region}}'
+        zone: '{{infrastructure.stack_outputs.DNSZonePrivate}}'
+      register: cluster
+
+    #
+    # Deploy/Configure Harmony server
+    #
+    - name: Provision Harmony
+      cloudformation:
+        state: present
+        region: '{{region}}'
+        stack_name: '{{harmony_stack}}'
+        disable_rollback: false
+        template: '{{harmony_template}}'
+        template_parameters:
+          VPC: '{{infrastructure.stack_outputs.VPC}}'
+          Subnet: '{{infrastructure.stack_outputs.Subnet}}'
+          KeyName: '{{ssh_key_name}}'
+          PrivateKeyURL: '{{ssh_private_key_url}}'
+          ManagerHost: '{{cluster.hosts.manager}}'
+          KerberosHost: '{{kerberos.stack_outputs.PublicDNS}}'
+          HarmonyVersion: '{{version}}'
+          HarmonyPatch: '{{patch|default("")}}'
+          HDFSURIVersion: '0.0.2-SNAPSHOT'
+          DNSZonePrivate: '{{infrastructure.stack_outputs.DNSZonePrivate}}'
+          DNSZoneReverse: '{{infrastructure.stack_outputs.DNSZoneReverse}}'
+      register: harmony
+
+    #
+    # Create the configuration file required for the tests.
+    #
+    - name: Generate Test Configuration
+      template:
+        src: 'templates/test-config.yaml.j2'
+        dest: '{{playbook_dir}}/test-config.yaml'

@@ -1,0 +1,43 @@
+---
+#
+# AWS Region: valid regions are:
+#
+#   'us-east-1'       US East (N. Virginia)
+#   'us-west-1'       US West (N. California)
+#   'us-west-2'       US West (Oregon)
+#   'eu-west-1'       EU (Ireland)
+#   'eu-central-1'    EU (Frankfurt)
+#   'ap-northeast-1'  Asia Pacific (Tokyo)
+#   'ap-southeast-1'  Asia Pacific (Singapore)
+#   'ap-southeast-2'  Asia Pacific (Sydney)
+#   'sa-east-1'       South America (Sao Paulo)
+#
+# Uncomment and set to desired region:
+#
+# region: 'us-west-1'
+
+#
+# Harmony Base Version:
+#
+# NOTE: The current implementation stores the Harmony installer
+# in an S3 Bucket named 'cleo-cdh-aws' as:
+#
+#   /harmony/Harmony-5.3.0.0-linux64-jre18.bin
+#
+# Uncomment and set to version in S3:
+#
+# version: '5.3.0.0'
+
+#
+# Harmony Patch Version:
+#
+# NOTE: The current implementation stores the Harmony patch zip file
+# in an S3 Bucket named 'cleo-cdh-aws' as:
+#
+#    /harmony/patches-5.3.0.3.zip
+#
+# There does not need to be a patch version specified.
+#
+# Uncomment and set to version in S3 (if required):
+#
+# patch: '5.3.0.3'

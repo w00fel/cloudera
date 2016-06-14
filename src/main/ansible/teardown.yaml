@@ -1,0 +1,70 @@
+---
+- name: Teardown AWS Cloudera CDH Cluster/Harmony Server
+  hosts: localhost
+  vars_files:
+    - vars-config.yaml
+
+  tasks:
+    - name: Terminate Harmony
+      cloudformation:
+        state: absent
+        region: '{{region}}'
+        stack_name: '{{harmony_stack}}'
+        template: '{{harmony_template}}'
+      when: '{{deployment|default(None) == "transient" or force_termination|default(false)}}'
+
+    - name: Terminate Cluster
+      cloudformation:
+        state: absent
+        region: '{{region}}'
+        stack_name: '{{cloudera_stack}}'
+        template: '{{cloudera_template}}'
+      when: '{{deployment|default(None) == "transient" or force_termination|default(false)}}'
+
+    - name: Terminate Kerberos
+      cloudformation:
+        state: absent
+        region: '{{region}}'
+        stack_name: '{{kerberos_stack}}'
+        template: '{{kerberos_template}}'
+      when: '{{deployment|default(None) == "transient" or force_termination|default(false)}}'
+
+    - name: Teardown Infrastructure
+      cloudformation:
+        state: absent
+        region: '{{region}}'
+        stack_name: '{{infrastructure_stack}}'
+        template: '{{infrastructure_template}}'
+      when: '{{deployment|default(None) == "transient" or force_termination|default(false)}}'
+
+    - name: Delete EC2 Key Pair
+      ec2_key:
+        state: absent
+        region: '{{region}}'
+        name: '{{ssh_key_name}}'
+      when: '{{deployment|default(None) == "transient" or force_termination|default(false)}}'
+
+    - name: Delete S3 Key Bucket
+      s3:
+        mode: delete
+        region: '{{region}}'
+        bucket: '{{ssh_key_bucket}}'
+      when: '{{deployment|default(None) == "transient" or force_termination|default(false)}}'
+
+    - name: Delete Local Test Configuration File
+      file:
+        state: absent
+        path: 'test-config.yaml'
+      when: '{{deployment|default(None) == "transient" or force_termination|default(false)}}'
+
+    - name: Delete Local Variables Configuration File
+      file:
+        state: absent
+        path: 'vars-config.yaml'
+      when: '{{deployment|default(None) == "transient" or force_termination|default(false)}}'
+
+    - name: Delete Local SSH Private Key File
+      file:
+        state: absent
+        path: '{{ssh_private_key_path}}'
+      when: '{{deployment|default(None) == "transient" or force_termination|default(false)}}'
